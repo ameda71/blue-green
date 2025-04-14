@@ -13,9 +13,9 @@ spec:
       labels:
         app: flask-app
         version: canary
-  spec:
-    containers:
-    - name: flask
-      image: sukanya996/flaskimg-app:green
-      ports:
-      - containerPort: 5000
+    spec:                        
+      containers:
+      - name: flask
+        image: sukanya996/flaskimg-app:green
+        ports:
+        - containerPort: 5000
