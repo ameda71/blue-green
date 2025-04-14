@@ -31,7 +31,7 @@ pipeline {
                 withEnv(["GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CREDENTIALS}"]) {
                     sh '''
                       gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-                      gcloud container clusters get-credentials blue-green-cluster --region us-central1 --project your-gcp-project
+                      gcloud container clusters get-credentials cluster-2 --region us-central1-c --project plated-epigram-452709-h6
                       cp ~/.kube/config kubeconfig.yaml
                     '''
                 }
