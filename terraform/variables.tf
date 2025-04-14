@@ -1,9 +1,3 @@
-variable "project_id" {
-  description = "The Google Cloud project ID"
-  type        = string
-  project_id= "plated-epigram-452709-h6"
-}
-
 variable "cluster_name" {
   description = "The name of the Kubernetes cluster"
   default     = "cluster-2"
