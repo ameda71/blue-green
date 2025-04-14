@@ -1,6 +1,6 @@
 provider "google" {
   zone    = var.zone
-  project = var.project_id  # Use variable for project
+  project = "plated-epigram-452709-h6"   # Use variable for project
 }
 
 resource "google_container_cluster" "primary" {
