@@ -2,72 +2,95 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDS = credentials('dockerhub-creds')
-        KUBECONFIG = credentials('kubeconfig-id')
+        GOOGLE_CREDENTIALS = credentials('gcp-key') // service account key
+        DOCKER_CREDS = credentials('dockerhub')
+        KUBECONFIG = 'kubeconfig.yaml'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repo') {
             steps {
-                git 'https://github.com/your-user/blue-green-deploy.git'
+                git 'https://github.com/Sukanya992/blue-green-deploy.git'
             }
         }
 
-        stage('Build Blue Docker Image') {
+        stage('Terraform Init & Apply') {
             steps {
-                dir('blue') {
-                    sh 'docker build -t sukanya996/flaskimg-app:blue .'
+                dir('terraform') {
+                    withEnv(["GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CREDENTIALS}"]) {
+                        sh '''
+                          terraform init
+                          terraform apply -auto-approve \
+                            -var="project_id=plated-epigram-452709-h6" \
+                            -var="region=us-central1"
+                        '''
+                    }
                 }
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+            }
+        }
+
+        stage('Configure Kubeconfig') {
+            steps {
+                withEnv(["GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CREDENTIALS}"]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push sukanya996/flaskimg-app:blue
+                      gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+                      gcloud container clusters get-credentials blue-green-cluster --region us-central1 --project your-gcp-project
+                      cp ~/.kube/config kubeconfig.yaml
                     '''
                 }
             }
         }
 
-        stage('Build Green Docker Image') {
+        stage('Build and Push Docker Images') {
             steps {
-                dir('green') {
-                    sh 'docker build -t sukanya996/flaskimg-app:green .'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
+                        dir('app/blue') {
+                            def blueImage = docker.build("sukanya996/flaskimg-app:blue")
+                            blueImage.push()
+                        }
+                        dir('app/green') {
+                            def greenImage = docker.build("sukanya996/flaskimg-app:green")
+                            greenImage.push()
+                        }
+                    }
                 }
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+            }
+        }
+
+        stage('Deploy Blue and Green') {
+            steps {
+                withEnv(["KUBECONFIG=${pwd()}/kubeconfig.yaml"]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push sukanya996/flaskimg-app:green
+                        kubectl apply -f k8s/blue.yaml
+                        kubectl apply -f k8s/green.yaml
+                        kubectl apply -f k8s/svc.yaml
                     '''
                 }
-            }
-        }
-
-        stage('Deploy Blue Version') {
-            steps {
-                sh 'kubectl apply -f k8s/blue-deployment.yaml'
-            }
-        }
-
-        stage('Deploy Green Version') {
-            steps {
-                sh 'kubectl apply -f k8s/green-deployment.yaml'
             }
         }
 
         stage('Validate Green Version') {
             steps {
-                echo 'Add curl or health check to validate the green version'
+                echo 'Validation step: Add health checks or test endpoints here.'
             }
         }
 
         stage('Switch Traffic to Green') {
             steps {
-                sh '''kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "flask", "version": "green"}}}' '''
+                withEnv(["KUBECONFIG=${pwd()}/kubeconfig.yaml"]) {
+                    sh '''
+                        kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "flask", "version": "green"}}}'
+                    '''
+                }
             }
         }
 
-        stage('Delete Blue Version') {
+        stage('Delete Blue') {
             steps {
-                sh 'kubectl delete deployment flask-blue || true'
+                withEnv(["KUBECONFIG=${pwd()}/kubeconfig.yaml"]) {
+                    sh 'kubectl delete deployment flask-blue || true'
+                }
             }
         }
     }
