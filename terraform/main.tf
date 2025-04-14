@@ -1,6 +1,6 @@
 # Google Provider Configuration
 provider "google" {
-  zone    = var.region
+  zone    = var.zone
   project = var.project_id  # Use variable for project
 }
 
