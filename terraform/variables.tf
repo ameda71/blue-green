@@ -9,7 +9,7 @@ variable "cluster_name" {
   default     = "cluster-2"
 }
 
-variable "region" {
+variable "zone" {
   description = "The region for the Kubernetes cluster"
   default     = "us-central1-c"
 }
