@@ -10,8 +10,7 @@ pipeline {
     stages {
         stage('Clone Repo') {
             steps {
-                git 'https://github.com/Sukanya992/blue-green.git'
-            }
+                git branch: 'main', url: 'https://github.com/Sukanya992/blue-green.git'            }
         }
 
         stage('Terraform Init & Apply') {
