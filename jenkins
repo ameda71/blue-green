@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_HUB_CREDS = credentials('dockerhub-creds')
+        KUBECONFIG = credentials('kubeconfig-id')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/your-user/blue-green-deploy.git'
+            }
+        }
+
+        stage('Build Blue Docker Image') {
+            steps {
+                dir('blue') {
+                    sh 'docker build -t sukanya996/flaskimg-app:blue .'
+                }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push sukanya996/flaskimg-app:blue
+                    '''
+                }
+            }
+        }
+
+        stage('Build Green Docker Image') {
+            steps {
+                dir('green') {
+                    sh 'docker build -t sukanya996/flaskimg-app:green .'
+                }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push sukanya996/flaskimg-app:green
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Blue Version') {
+            steps {
+                sh 'kubectl apply -f k8s/blue-deployment.yaml'
+            }
+        }
+
+        stage('Deploy Green Version') {
+            steps {
+                sh 'kubectl apply -f k8s/green-deployment.yaml'
+            }
+        }
+
+        stage('Validate Green Version') {
+            steps {
+                echo 'Add curl or health check to validate the green version'
+            }
+        }
+
+        stage('Switch Traffic to Green') {
+            steps {
+                sh '''kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "flask", "version": "green"}}}' '''
+            }
+        }
+
+        stage('Delete Blue Version') {
+            steps {
+                sh 'kubectl delete deployment flask-blue || true'
+            }
+        }
+    }
+}
