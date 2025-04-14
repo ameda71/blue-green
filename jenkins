@@ -19,9 +19,7 @@ pipeline {
                     withEnv(["GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CREDENTIALS}"]) {
                         sh '''
                           terraform init
-                          terraform apply -auto-approve \
-                            -var="project_id=plated-epigram-452709-h6" \
-                            -var="region=us-central1"
+                          terraform apply -auto-approve 
                         '''
                     }
                 }
