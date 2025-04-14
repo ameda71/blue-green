@@ -5,8 +5,8 @@ pipeline {
         IMAGE_NAME = "sample1"
         CLUSTER_NAME = "cluster-2"
         GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-key')
-        GREEN_DEPLOY = "green.yaml"
-        BLUE_DEPLOY = "blue.yaml"
+        GREEN_DEPLOY = "k8s/green.yaml"
+        BLUE_DEPLOY = "k8s/blue.yaml"
     }
 
     stages {
