@@ -1,7 +1,7 @@
-# Declare Variables
 variable "project_id" {
   description = "The Google Cloud project ID"
   type        = string
+  project_id= "plated-epigram-452709-h6"
 }
 
 variable "cluster_name" {
@@ -10,13 +10,13 @@ variable "cluster_name" {
 }
 
 variable "zone" {
-  description = "The region for the Kubernetes cluster"
+  description = "The zone for the Kubernetes cluster"
   default     = "us-central1-c"
 }
 
 variable "node_count" {
   description = "The number of nodes in the cluster"
-  type        = number  # Change type to number
+  type        = number
   default     = 2
 }
 
