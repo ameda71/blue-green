@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-blue
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flask
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: flask
+        version: blue
+    spec:
+      containers:
+        - name: flask
+          image: sukanya996/flaskimg-app:blue
+          ports:
+            - containerPort: 5000
