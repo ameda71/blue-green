@@ -120,7 +120,7 @@ pipeline {
         stage('Switch Traffic to Green') {
             steps {
                 sh '''
-                kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "sample1", "version": "green"}}}'
+                kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "flask", "version": "green"}}}'
                 '''
             }
         }
