@@ -1,10 +1,8 @@
-# Google Provider Configuration
 provider "google" {
   zone    = var.zone
   project = var.project_id  # Use variable for project
 }
 
-# Google Kubernetes Cluster
 resource "google_container_cluster" "primary" {
   name     = var.cluster_name
   location = var.zone
