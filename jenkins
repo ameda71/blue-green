@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone Repo') {
             steps {
-                git 'https://github.com/Sukanya992/blue-green-deploy.git'
+                git 'https://github.com/Sukanya992/blue-green.git'
             }
         }
 
