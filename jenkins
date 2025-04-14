@@ -7,6 +7,7 @@ pipeline {
         GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-key')
         GREEN_DEPLOY = "k8s/green.yaml"
         BLUE_DEPLOY = "k8s/blue.yaml"
+        SVC="k8s/svc.yaml"
     }
 
     stages {
@@ -89,6 +90,7 @@ pipeline {
         stage('Deploy to Green') {
             steps {
                 sh 'kubectl apply -f $GREEN_DEPLOY'
+                sh 'kubectl apply -f $SVC'
             }
         }
 
