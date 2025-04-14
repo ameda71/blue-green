@@ -62,13 +62,18 @@ pipeline {
 
         stage('Terraform Apply (Cluster)') {
             steps {
+                script {
+                    // Change to the directory containing the Terraform configuration files
+                 dir('terraform') {
                 sh '''
                 terraform init
                 terraform plan
                 terraform apply --auto-approve
                 '''
             }
+            }
         }
+}
 
         stage('Wait for Cluster Access') {
             steps {
