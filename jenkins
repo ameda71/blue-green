@@ -1,93 +1,113 @@
 pipeline {
     agent any
-
     environment {
-        GOOGLE_CREDENTIALS = credentials('gcp-key') // service account key
-        DOCKER_CREDS = credentials('dockerhub')
-        KUBECONFIG = 'kubeconfig.yaml'
+        ZONE = "us-central1-c"
+        IMAGE_NAME = "sample1"
+        CLUSTER_NAME = "cluster-2"
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-key')
+        GREEN_DEPLOY = "green.yaml"
+        BLUE_DEPLOY = "blue.yaml"
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Docker Login') {
             steps {
-                git branch: 'main', url: 'https://github.com/Sukanya992/blue-green.git'            }
-        }
-
-        stage('Terraform Init & Apply') {
-            steps {
-                dir('terraform') {
-                    withEnv(["GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CREDENTIALS}"]) {
-                        sh '''
-                          terraform init
-                          terraform apply -auto-approve 
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Configure Kubeconfig') {
-            steps {
-                withEnv(["GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CREDENTIALS}"]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', 
+                                                  usernameVariable: 'DOCKER_USER', 
+                                                  passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                      gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-                      gcloud container clusters get-credentials cluster-2 --region us-central1-c --project plated-epigram-452709-h6
-                      cp ~/.kube/config kubeconfig.yaml
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
         }
 
-        stage('Build and Push Docker Images') {
+        stage('GCP Login') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
-                        dir('app/blue') {
-                            def blueImage = docker.build("sukanya996/flaskimg-app:blue")
-                            blueImage.push()
-                        }
-                        dir('app/green') {
-                            def greenImage = docker.build("sukanya996/flaskimg-app:green")
-                            greenImage.push()
-                        }
-                    }
-                }
+                sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
             }
         }
 
-        stage('Deploy Blue and Green') {
+        stage('Build Docker Image') {
             steps {
-                withEnv(["KUBECONFIG=${pwd()}/kubeconfig.yaml"]) {
+                sh '''
+                docker build -t "$IMAGE_NAME" .
+                docker tag "$IMAGE_NAME" sukanya996/$IMAGE_NAME:$BUILD_NUMBER
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh 'docker push sukanya996/$IMAGE_NAME:$BUILD_NUMBER'
+            }
+        }
+
+        stage('Update Deployment Files') {
+            steps {
+                sh '''
+                sed -i "s|image: .*|image: sukanya996/${IMAGE_NAME}:${BUILD_NUMBER}|" $GREEN_DEPLOY
+                sed -i "s|image: .*|image: sukanya996/${IMAGE_NAME}:${BUILD_NUMBER}|" $BLUE_DEPLOY
+                '''
+            }
+        }
+
+        stage('Terraform Apply (Cluster)') {
+            steps {
+                sh '''
+                terraform init
+                terraform plan
+                terraform apply --auto-approve
+                '''
+            }
+        }
+
+        stage('Wait for Cluster Access') {
+            steps {
+                retry(3) {
                     sh '''
-                        kubectl apply -f k8s/blue.yaml
-                        kubectl apply -f k8s/green.yaml
-                        kubectl apply -f k8s/svc.yaml
+                    sleep 10
+                    gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE --project plated-epigram-452709-h6
                     '''
                 }
             }
         }
 
-        stage('Validate Green Version') {
+        stage('Deploy to Green') {
             steps {
-                echo 'Validation step: Add health checks or test endpoints here.'
+                sh 'kubectl apply -f $GREEN_DEPLOY'
+            }
+        }
+
+        stage('Validation (Green)') {
+            steps {
+                sh '''
+                echo "Waiting for app to be ready..."
+                sleep 20
+                # You can add curl tests or readiness probes here
+                '''
             }
         }
 
         stage('Switch Traffic to Green') {
             steps {
-                withEnv(["KUBECONFIG=${pwd()}/kubeconfig.yaml"]) {
-                    sh '''
-                        kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "flask", "version": "green"}}}'
-                    '''
-                }
+                sh '''
+                kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "sample1", "version": "green"}}}'
+                '''
             }
         }
 
-        stage('Delete Blue') {
+        stage('Delete Blue Deployment (Optional)') {
             steps {
-                withEnv(["KUBECONFIG=${pwd()}/kubeconfig.yaml"]) {
-                    sh 'kubectl delete deployment flask-blue || true'
-                }
+                sh '''
+                kubectl delete -f $BLUE_DEPLOY || echo "No blue deployment found"
+                '''
+            }
+        }
+
+        stage('Get Service') {
+            steps {
+                sh 'kubectl get svc'
             }
         }
     }
