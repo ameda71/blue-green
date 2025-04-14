@@ -82,3 +82,42 @@ pipeline {
         }
 
         stage('Deploy to Green') {
+            steps {
+                sh 'kubectl apply -f $GREEN_DEPLOY'
+            }
+        }
+
+        stage('Validation (Green)') {
+            steps {
+                sh '''
+                echo "Waiting for green app to be ready..."
+                sleep 20
+                # curl or other checks here
+                '''
+            }
+        }
+
+        stage('Switch Traffic to Green') {
+            steps {
+                sh '''
+                kubectl patch svc flask-service -p '{"spec": {"selector": {"app": "sample1", "version": "green"}}}'
+                '''
+            }
+        }
+
+        stage('Delete Blue Deployment (Optional)') {
+            steps {
+                sh '''
+                kubectl delete -f $BLUE_DEPLOY || echo "No blue deployment found"
+                '''
+            }
+        }
+
+        stage('Get Service') {
+            steps {
+                sh 'kubectl get svc'
+            }
+        }
+    }
+}
+
