@@ -25,7 +25,16 @@ pipeline {
 
         stage('GCP Login') {
             steps {
-                sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
+                withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh '''
+                    # Authenticate with Google Cloud
+                    echo "Using credentials from: $GOOGLE_APPLICATION_CREDENTIALS"
+                    gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                    
+                    # Retrieve GKE credentials (IMPORTANT)
+                    gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE
+                    '''
+                }
             }
         }
 
@@ -65,16 +74,16 @@ pipeline {
             steps {
                 script {
                     // Change to the directory containing the Terraform configuration files
-                 dir('terraform') {
-                sh '''
-                terraform init
-                terraform plan
-                terraform apply --auto-approve
-                '''
-            }
+                    dir('terraform') {
+                        sh '''
+                        terraform init
+                        terraform plan
+                        terraform apply --auto-approve
+                        '''
+                    }
+                }
             }
         }
-}
 
         stage('Wait for Cluster Access') {
             steps {
@@ -127,4 +136,3 @@ pipeline {
         }
     }
 }
-
