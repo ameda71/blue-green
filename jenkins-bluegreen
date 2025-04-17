@@ -30,9 +30,6 @@ pipeline {
                     # Authenticate with Google Cloud
                     echo "Using credentials from: $GOOGLE_APPLICATION_CREDENTIALS"
                     gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
-                    
-                    # Retrieve GKE credentials (IMPORTANT)
-                    gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE
                     '''
                 }
             }
