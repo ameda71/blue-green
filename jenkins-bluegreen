@@ -98,8 +98,6 @@ pipeline {
                 sh 'kubectl apply -f $BLUE_DEPLOY'
                 sh 'kubectl apply -f $GREEN_DEPLOY'
                 sh 'kubectl apply -f $SVC'
-                sh 'sleep 50'
-                sh 'kubectl get svc'
                 
             }
         }
@@ -107,8 +105,9 @@ pipeline {
         stage('Validation (Green)') {
             steps {
                 sh '''
-                echo "Waiting for green app to be ready..."
-                sleep 20
+                echo "Waiting for blue app to be ready..."
+                sleep 50
+                sh 'kubectl get svc'
                 # curl or other checks here
                 '''
             }
