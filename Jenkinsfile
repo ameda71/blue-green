@@ -113,13 +113,13 @@ pipeline {
             }
         }
 
-        stage('Delete Blue Deployment (Optional)') {
-            steps {
-                sh '''
-                kubectl delete -f $BLUE_DEPLOY || echo "No blue deployment found"
-                '''
-            }
-        }
+        // stage('Delete Blue Deployment (Optional)') {
+        //     steps {
+        //         sh '''
+        //         kubectl delete -f $BLUE_DEPLOY || echo "No blue deployment found"
+        //         '''
+        //     }
+        // }
 
         stage('Get Service') {
             steps {
