@@ -1,6 +1,6 @@
 provider "google" {
   zone = var.region
-  project = "plated-epigram-452709-h6"
+  project = "manisai"
 }
 
 resource "google_container_cluster" "primary" {
