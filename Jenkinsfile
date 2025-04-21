@@ -52,8 +52,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 sh '''
-                docker push sukanya996/$IMAGE_NAME:blue-$BUILD_NUMBER
-                docker push sukanya996/$IMAGE_NAME:green-$BUILD_NUMBER
+                docker push saiteja562/$IMAGE_NAME:blue-$BUILD_NUMBER
+                docker push saiteja562/$IMAGE_NAME:green-$BUILD_NUMBER
                 '''
             }
         }
